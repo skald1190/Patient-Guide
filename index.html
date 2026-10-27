@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dr. Kaldawi Patient Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Dr. Sami Kaldawi's neurology patient guide: your plan, tracking scores, medicine guide, lifestyle steps, and resources.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;700&family=Atkinson+Hyperlegible+Next:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/app.css">
+
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#home" aria-label="Dr. Kaldawi Patient Guide, home">
+      <svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true"><rect width="38" height="38" rx="9" fill="var(--accent)"/><g fill="none" stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round"><path d="M8 19h7l3-7 4 14 3-7h5"/></g></svg>
+      <span><b>Dr. Kaldawi</b><span>Neurology patient guide</span></span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="#plan" data-v="plan">Plan builder</a>
+      <a href="#scores" data-v="scores">Tracking scores</a>
+      <a href="#medicines" data-v="medicines">Medicines</a>
+      <a href="#lifestyle" data-v="lifestyle">Lifestyle</a>
+      <a href="#handouts" data-v="handouts">Handouts</a>
+      <a href="#resources" data-v="resources">Resources</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <p id="loading" class="muted">Loading the guide…</p>
+
+  <section id="view-home" class="view" hidden>
+    <div class="hero">
+      <div class="eyebrow">Dr. Sami Kaldawi, DO · Neurology</div>
+      <h1>Everything we talked about, in one place.</h1>
+      <p>Your medicines, the lifestyle steps that help, the scores we track at each visit, and the groups I trust. Keep this page and come back to it.</p>
+    </div>
+    <div class="cards">
+      <a class="card" href="#scores"><h3>Tracking scores</h3><p>Fill out your symptom and function scores before each visit. Your total adds up as you go.</p></a>
+      <a class="card" href="#medicines"><h3>Medicine guide</h3><p>How to take each medicine, side effects, step-up schedules, and what to do in pregnancy.</p></a>
+      <a class="card" href="#lifestyle"><h3>Lifestyle</h3><p>Sleep, exercise, food, fluids, and stress. Includes SEEDS for headache and extra steps for POTS.</p></a>
+      <a class="card" href="#resources"><h3>Resources</h3><p>Foundations, support groups, research, medicine savings, caregiving, and legal help.</p></a>
+    </div>
+    <div class="notice emergency" style="margin-top:2rem"><strong>For an emergency, call 911.</strong> This guide is for education. It goes with the plan we made together and does not replace advice about your own situation.</div>
+  </section>
+
+  <section id="view-plan" class="view" hidden>
+    <div class="pagehead">
+      <div class="eyebrow">For Dr. Kaldawi</div>
+      <h1>Plan builder</h1>
+      <p>Pick the diagnoses and medicines. The handout builds itself from the guide as you go. Nothing typed here is saved anywhere; leave names and other identifying details out.</p>
+    </div>
+    <div class="builder">
+      <form id="builder-form" class="form-col" onsubmit="return false">
+        <div class="panel"><h3><span class="step">1</span> Diagnosis</h3><div id="f-conds" class="stack"></div></div>
+
+        <div class="panel"><h3><span class="step">2</span> Lifestyle</h3>
+          <div class="chips" role="radiogroup" aria-label="Lifestyle plan">
+            <label class="chip"><input type="radio" name="life" id="life-auto" value="auto"> Match the diagnosis</label>
+            <label class="chip"><input type="radio" name="life" id="life-general" value="general"> Healthy habits</label>
+            <label class="chip"><input type="radio" name="life" id="life-seeds" value="seeds"> SEEDS for headache</label>
+          </div>
+          <label class="toggle-big"><input type="checkbox" id="f-oh"><span>Orthostatic hypotension or POTS<small>Adds salt (5 to 10 g a day), fluids, and daytime compression stockings.</small></span></label>
+          <div id="seeds-fields" class="stack" hidden>
+            <div class="grp-title">Headache plan</div>
+            <label class="field">For diagnostics<input type="text" id="h-dx" placeholder="e.g. MRI brain"></label>
+            <label class="field">Preventive medicines<input type="text" id="h-pv"></label>
+            <label class="field">Step 1 rescue<input type="text" id="h-s1" placeholder="e.g. rizatriptan 10 mg"></label>
+            <label class="field">Step 2 rescue (after 2 hours)<input type="text" id="h-s2"></label>
+          </div>
+        </div>
+
+        <div class="panel"><h3><span class="step">3</span> Medicines</h3>
+          <input type="search" id="med-search" placeholder="Search medicines" aria-label="Search medicines">
+          <div id="med-pick" class="medpick"></div>
+          <div id="med-cfg" class="stack"></div>
+        </div>
+
+        <div class="panel"><h3><span class="step">4</span> Tracking scores</h3><div id="f-scores" class="chips"></div></div>
+
+        <div class="panel"><h3><span class="step">5</span> Handouts</h3>
+          <div id="f-ho" class="stack" style="gap:.4rem"></div>
+          <label class="field" id="ear-wrap" hidden>Ear to treat (Epley)<select id="f-ear"><option value="">Not specified</option><option value="right">Right</option><option value="left">Left</option><option value="both">Both</option></select></label>
+        </div>
+
+        <div class="panel"><h3><span class="step">6</span> Finish</h3>
+          <label class="field">Note to the patient<textarea id="f-note" placeholder="e.g. Follow up in 3 months. Labs before the visit."></textarea></label>
+          <label class="field">Date on the plan<input type="date" id="f-date"></label>
+          <label class="chip" style="border-radius:8px"><input type="checkbox" id="f-about"> Add "About your condition"</label>
+          <label class="chip" style="border-radius:8px"><input type="checkbox" id="f-rules"> Add "Rules for every medicine"</label>
+          <label class="chip" style="border-radius:8px"><input type="checkbox" id="f-before"> Add "Before you message us"</label>
+        </div>
+      </form>
+
+      <div class="preview-wrap">
+        <div class="preview-bar">
+          <span id="plan-status" class="muted mono" style="margin-right:auto"></span>
+          <button class="btn small" type="button" id="btn-copy">Copy patient link</button>
+          <button class="btn small ghost" type="button" id="btn-open">Open as patient</button>
+          <button class="btn small ghost" type="button" id="btn-print">Print</button>
+          <button class="btn small ghost" type="button" id="btn-reset">New plan</button>
+        </div>
+        <div class="preview-scroll" id="plan-preview"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-myplan" class="view" hidden>
+    <div class="row no-print" style="margin-bottom:1rem">
+      <button class="btn" type="button" id="myplan-print">Print my plan</button>
+      <a class="btn ghost" href="#scores">Tracking scores</a>
+      <button class="btn ghost small" type="button" id="myplan-edit" style="margin-left:auto">Edit in plan builder</button>
+    </div>
+    <div id="myplan-doc"></div>
+  </section>
+
+  <section id="view-scores" class="view" hidden>
+    <div class="pagehead">
+      <h1>Tracking scores</h1>
+      <p>These short questionnaires measure how your symptoms affect daily life. Fill out the ones on your plan before each visit, so we can see whether treatment is working. Your answers stay on your device.</p>
+    </div>
+    <h2 style="margin-bottom:.8rem">Fill out at home</h2>
+    <div id="scores-home" class="scoregrid"></div>
+    <h2 style="margin:2rem 0 .8rem">Done with you in clinic</h2>
+    <div id="scores-clinic" class="scoregrid"></div>
+  </section>
+
+  <section id="view-score" class="view" hidden><div id="score-body"></div></section>
+
+  <section id="view-medicines" class="view" hidden>
+    <div class="pagehead"><h1>Medicine guide</h1><p>Find the section for your condition and read only the medicines on your plan. Blank lines are filled in on your personal plan.</p></div>
+    <div class="lib"><nav id="lib-toc" class="toc" aria-label="Medicine guide sections"></nav><div id="lib-body" class="prose"></div></div>
+  </section>
+
+  <section id="view-lifestyle" class="view" hidden>
+    <div class="pagehead"><h1>Lifestyle</h1><p>The everyday steps that make the biggest difference, in my own words.</p></div>
+    <div id="life-tabs" class="tabs" role="tablist"></div>
+    <div id="life-body" class="prose"></div>
+  </section>
+
+  <section id="view-handouts" class="view" hidden>
+    <div class="pagehead"><h1>Handouts</h1><p>Instructions and forms we may go over with you in clinic.</p></div>
+    <div id="ho-tabs" class="tabs" role="tablist"></div>
+    <div id="ho-body" class="prose"></div>
+  </section>
+
+  <section id="view-resources" class="view" hidden>
+    <div class="pagehead"><h1>Resources I recommend</h1><p>Groups, apps, and programs I trust, by condition. The last three groups are useful for everyone.</p></div>
+    <div id="res-jump" class="chips" style="margin-bottom:1.5rem"></div>
+    <div id="res-body" class="prose"></div>
+  </section>
+</main>
+
+<footer class="site no-print">
+  <div class="wrap">
+    <p><strong>For an emergency, call 911.</strong> This site is for education and does not replace medical advice about your own situation.</p>
+    <p>Content written and reviewed by Sami Kaldawi, DO. Last reviewed October 2026.</p>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="assets/scores.js"></script>
+<script src="assets/plan-config.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
