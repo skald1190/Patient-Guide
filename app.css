@@ -237,3 +237,6 @@ footer.site .wrap { display: grid; gap: .5rem; }
   main { padding: 0; }
   .doc .prose, .doc-sec, .doc .glance { max-width: none; }
 }
+
+/* Speed: let the browser skip laying out handout sections that are scrolled out of view */
+@media screen { .preview-scroll .doc-sec { content-visibility: auto; contain-intrinsic-size: auto 700px; } }

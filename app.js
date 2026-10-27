@@ -36,7 +36,12 @@
     s = s.replace(/\u0001{3,}|_{4,}/g, '<span class="blank" aria-label="blank"></span>').replace(/\u0001/g, '_');
     return s;
   }
+  const MD_CACHE = new Map();
   function md(src) {
+    const hit = MD_CACHE.get(src); if (hit !== undefined) return hit;
+    const out = mdRaw(src); if (MD_CACHE.size > 400) MD_CACHE.clear(); MD_CACHE.set(src, out); return out;
+  }
+  function mdRaw(src) {
     src = src.replace(/<!--[\s\S]*?-->/g, '');
     const lines = src.split('\n');
     let out = '', i = 0;
@@ -345,17 +350,27 @@
       cal.rows.map((r, i) => `<tr><td>${fmtDate(r.from)}${r.to ? ' – ' + fmtDate(r.to) : ' and after'}</td><td><strong>${r.dose} ${esc(cal.unit)}</strong>${cal.f ? ' ' + esc(cal.f) : ''}${r.last && cal.rows.length > 1 ? ' (goal dose)' : ''}${i > 0 && cal.cond ? `<br><span class="muted">Go up only if ${esc(cal.cond)}</span>` : ''}</td><td class="box"></td></tr>`).join('') +
       `</tbody></table></div>${cal.cond ? `<p>Go up to the next step only if <strong>${esc(cal.cond)}</strong>. If side effects are hard to live with, stay at the dose you are on and call us.</p>` : ''}</div>`;
   }
-  function qrHTML(url) {
-    if (!window.qrcode) return '';
-    try { const q = window.qrcode(0, 'L'); q.addData(url); q.make(); return `<div class="qr">${q.createSvgTag({ cellSize: 3, margin: 0, scalable: true })}<span>Scan to open this plan on your phone</span></div>`; }
-    catch (e) { return '<div class="qr"><span>This plan is too long for a QR code. Use the link instead.</span></div>'; }
+  const QR_CACHE = new Map();
+  function qrSVG(url) {
+    if (QR_CACHE.has(url)) return QR_CACHE.get(url);
+    let out;
+    try { const q = window.qrcode(0, 'L'); q.addData(url); q.make(); out = q.createSvgTag({ cellSize: 3, margin: 0, scalable: true }); }
+    catch (e) { out = null; }
+    QR_CACHE.clear(); QR_CACHE.set(url, out); return out;
   }
-  function planDoc(p, forPatient) {
+  function qrHTML(url, lazy) {
+    if (!window.qrcode) return '';
+    if (lazy && !QR_CACHE.has(url)) return '<div class="qr" data-qr="1"><span>QR code updates when you stop typing</span></div>';
+    const svg = qrSVG(url);
+    if (!svg) return '<div class="qr"><span>This plan is too long for a QR code. Use the link instead.</span></div>';
+    return `<div class="qr">${svg}<span>Scan to open this plan on your phone</span></div>`;
+  }
+  function planDoc(p, forPatient, lazyQR) {
     const conds = p.c.map(condById).filter(Boolean);
     const medIds = Object.keys(p.m).filter((id) => C.medById[id]);
     const scores = p.sc.map((id) => S().find((s) => s.id === id)).filter(Boolean);
     const url = BASE + '?p=' + encodePlan(p);
-    let h = `<article class="doc" id="doc"><header class="doc-head"><div class="stack" style="gap:.4rem"><div class="eyebrow">Dr. Sami Kaldawi, DO · Neurology</div><h1>Your neurology plan</h1><div class="meta">Prepared ${fmtDate(parseDate(p.date))}</div></div>${qrHTML(url)}</header>`;
+    let h = `<article class="doc" id="doc"><header class="doc-head"><div class="stack" style="gap:.4rem"><div class="eyebrow">Dr. Sami Kaldawi, DO · Neurology</div><h1>Your neurology plan</h1><div class="meta">Prepared ${fmtDate(parseDate(p.date))}</div></div>${qrHTML(url, lazyQR)}</header>`;
     if (!conds.length && !medIds.length) return h + '<div class="empty">Pick a diagnosis or a medicine to start the plan.</div></article>';
     // at a glance
     h += `<section class="doc-sec glance"><h2>Your plan at a glance</h2><dl>`;
@@ -470,7 +485,7 @@
     else if (t.id === 'f-rules') P.rules = t.checked;
     else if (t.id === 'f-before') P.before = t.checked;
     else return;
-    refresh();
+    refresh(e.type === 'input' && (t.type === 'text' || t.tagName === 'TEXTAREA' || t.type === 'number'));
   }
   function syncForm() {
     CFG().conditions.forEach((c) => { $('#cond-' + c.id).checked = P.c.includes(c.id); });
@@ -515,15 +530,16 @@
       </div>`;
     }).join('') : '<p class="muted">Medicines you pick show up here so you can add doses and step-up calendars.</p>';
   }
-  let refreshT;
-  function refresh() {
-    clearTimeout(refreshT);
+  let refreshT, qrT;
+  function refresh(typing) {
+    clearTimeout(refreshT); clearTimeout(qrT);
     refreshT = setTimeout(() => {
       $('#seeds-fields').hidden = !useSeeds(P);
-      $('#plan-preview').innerHTML = planDoc(P);
+      $('#plan-preview').innerHTML = planDoc(P, false, true);
+      qrT = setTimeout(() => { const box = $('#plan-preview [data-qr]'); if (box) box.outerHTML = qrHTML(planURL()); }, 600);
       const n = Object.keys(P.m).length;
       $('#plan-status').textContent = `${P.c.length} diagnos${P.c.length === 1 ? 'is' : 'es'} · ${n} medicine${n === 1 ? '' : 's'}`;
-    }, 60);
+    }, typing ? 250 : 30);
   }
 
   /* ------------------------------------------------------------------ patient view */
