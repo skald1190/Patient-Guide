@@ -478,7 +478,7 @@ a.xref { text-decoration-style: dotted; text-decoration-thickness: 1.5px; font-w
 <footer class="site no-print">
   <div class="wrap">
     <p><strong>For an emergency, call 911.</strong> This site is for education and does not replace medical advice about your own situation.</p>
-    <p>Content written and reviewed by Sami Kaldawi, DO. Last reviewed October 2026. <span class="mono">Version 2026-10-30b</span></p>
+    <p>Content written and reviewed by Sami Kaldawi, DO. Last reviewed October 2026. <span class="mono">Version 2026-10-30d</span></p>
   </div>
 </footer>
 
@@ -1343,6 +1343,18 @@ window.PLAN_CONFIG = {
   const addMonths = (d, n, day = d.getDate()) => { const x = new Date(d.getFullYear(), d.getMonth() + n, 1); x.setDate(Math.min(day, lastDay(x))); return x; };
   const monthOf = (a, b) => { let m = (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth(); if (b.getDate() < a.getDate() && b.getDate() !== lastDay(b)) m--; return m + 1; };
   function taper(t) {
+    const mode = t.m || (num(t.s, 0) > 0 ? 'up' : 'full');
+    if (mode === 'up') {
+      const s0 = num(t.s, 0), by = num(t.st, 0), ev = Math.max(1, num(t.e, 7)), cap = num(t.cap, 0), fw = Math.max(1, num(t.fw, 4));
+      if (!(s0 > 0)) return null;
+      const start = parseDate(t.dt), fu = addDays(start, fw * 7); let day = new Date(start); const rows = []; let d = cap > 0 ? Math.min(s0, cap) : s0, g = 0;
+      while (g++ < 80) {
+        const next = addDays(day, ev);
+        if (!(by > 0) || (cap > 0 && d >= cap) || next >= fu) { rows.push({ from: new Date(day), to: null, dose: d, ph: 'top' }); break; }
+        rows.push({ from: new Date(day), to: addDays(next, -1), dose: d, ph: 'up' }); day = next; d = +(d + by).toFixed(2); if (cap > 0) d = Math.min(d, cap);
+      }
+      return { k: 'p', mode, nw: true, rows, unit: 'mg', f: t.f || '', cond: t.c || '', start, full: rows[rows.length - 1].dose, lo: 0, bands: [], up: rows.length > 1, upBy: by, upEvery: ev, cap, ten: null, pjp: null, end: rows[rows.length - 1], fu, fw };
+    }
     const full = num(t.mx, 0); if (!(full > 0)) return null;
     const up0 = num(t.s, 0), upBy = num(t.st, 0), upEvery = num(t.e, 7), hold = num(t.hw, 1), hu = t.hu || 'wk';
     const bands = (Array.isArray(t.b) && t.b.length ? t.b : PRED_STEPS).map((x) => ({ floor: num(x.f, 0), by: num(x.by, 0), n: num(x.w, 1), u: x.u || 'wk' })).filter((x) => x.floor >= 0).sort((a, b) => b.floor - a.floor);
@@ -1351,13 +1363,9 @@ window.PLAN_CONFIG = {
     const start = parseDate(t.dt); let day = new Date(start); const rows = []; let anchor = null;
     const addSpan = (d, n, u) => { if (u === 'mo' && Number.isInteger(n)) { anchor = anchor ?? d.getDate(); return addMonths(d, n, anchor); } anchor = null; return addDays(d, Math.round(n * (u === 'mo' ? 30.44 : 7))); };
     const push = (dose, next, ph) => { rows.push({ from: new Date(day), to: next ? addDays(next, -1) : null, dose, ph }); if (next) day = next; };
-    if (up0 > 0 && up0 < full && upBy > 0 && upEvery > 0) { let d = up0, g = 0; while (d < full && g++ < 40) { push(d, addDays(day, upEvery), 'up'); d = Math.min(+(d + upBy).toFixed(2), full); } }
     const nw = !!t.nw, fw = Math.max(1, num(t.fw, 4)), fu = addDays(start, fw * 7);
     if (nw) {
-      if (rows.length) { const keep = rows.filter((r) => r.from < fu); rows.length = 0; rows.push(...keep); }
-      if (rows.length && rows[rows.length - 1].to && addDays(rows[rows.length - 1].to, 1) < fu) push(full, null, 'top');
-      else if (rows.length) { const l = rows[rows.length - 1]; l.to = null; l.ph = 'top'; }
-      else push(full, null, 'top');
+      push(full, null, 'top');
     }
     else if (full <= lo) { push(full, null, 'end'); }
     else {
@@ -1405,7 +1413,7 @@ window.PLAN_CONFIG = {
   const moTxt = (n, up) => `month ${n}, counting the first month ${up ? 'at full dose' : 'of prednisone'} as month 1`;
   function taperCheck(cal) {
     if (!cal) return 'Enter the full dose to see the dates.';
-    if (cal.nw) return `No lowering schedule. The calendar goes up to ${cal.end.dose} mg by the follow-up visit around <strong>${fmtDate(cal.fu)}</strong>.`;
+    if (cal.nw) return cal.mode === 'up' ? `Goes up until symptoms are controlled. If they are not controlled sooner, the calendar reaches ${cal.end.dose} mg by the follow-up visit around <strong>${fmtDate(cal.fu)}</strong>.${cal.cap > 0 && cal.end.dose >= cal.cap ? ' It stops at your ceiling dose.' : ''}` : `No lowering schedule. ${cal.full} mg a day until the follow-up visit around <strong>${fmtDate(cal.fu)}</strong>.`;
     let h = cal.ten ? `Reaches 10 mg on <strong>${fmtDate(cal.ten.date)}</strong> (${moTxt(cal.ten.mo, cal.up)}).` : '';
     if (cal.ten && cal.ten.mo > 7) h += ` <span class="warn-txt">Later than the month 6 to 7 goal.</span>`;
     else if (cal.ten && cal.ten.mo < 6) h += ' Sooner than the month 6 to 7 goal.';
@@ -1420,7 +1428,7 @@ window.PLAN_CONFIG = {
   }
   function taperShort(cal) {
     const hold = cal.rows.find((r) => r.ph === 'hold');
-    if (cal.nw) return esc((cal.up ? `Start ${cal.rows[0].dose} mg on ${fmtDate(cal.start).replace(/, \d{4}$/, '')}, go up ${cal.upBy} mg every ${cal.upEvery} days, up to ${cal.end.dose} mg${cal.cond ? `, only while ${cal.cond}` : ''}. ` : `${cal.full} mg a day from ${fmtDate(cal.start).replace(/, \d{4}$/, '')}. `) + `Follow-up around ${fmtDate(cal.fu).replace(/, \d{4}$/, '')} (sooner once symptoms are controlled); we plan the lowering then.` + (cal.full >= 20 ? ' Bactrim while on 20 mg or more.' : ''));
+    if (cal.nw) return esc((cal.mode === 'up' ? `Start ${cal.rows[0].dose} mg on ${fmtDate(cal.start).replace(/, \d{4}$/, '')}, then go up ${cal.upBy} mg every ${cal.upEvery} days until your symptoms are controlled${cal.cap > 0 ? ` (never above ${cal.cap} mg)` : ''}. ` : `${cal.full} mg a day from ${fmtDate(cal.start).replace(/, \d{4}$/, '')}. `) + `Follow-up around ${fmtDate(cal.fu).replace(/, \d{4}$/, '')} (sooner once symptoms are controlled); we plan the lowering then.` + (cal.full >= 20 ? ' Bactrim while on 20 mg or more.' : ''));
     let s = cal.up ? `Start ${cal.rows[0].dose} mg on ${fmtDate(cal.start).replace(/, \d{4}$/, '')}, go up ${cal.upBy} mg every ${cal.upEvery} days to ${cal.full} mg. ` : '';
     if (hold) s += `${cal.full} mg until ${fmtDate(hold.to || hold.from).replace(/, \d{4}$/, '')}, then lower by ${taperSteps(cal).join(', then ')} mg`;
     if (cal.ten) s += ` (10 mg on ${fmtDate(cal.ten.date).replace(/, \d{4}$/, '')})`;
@@ -1434,7 +1442,7 @@ window.PLAN_CONFIG = {
     return `<div class="stack"><h3>${inline(name)}</h3>` +
       (cal.ten ? `<p>Goal: down to 10 mg by <strong>${fmtDate(cal.ten.date)}</strong> (month ${cal.ten.mo}).</p>` : '') +
       `<div class="tbl" style="overflow-x:auto"><table class="cal"><thead><tr><th>Dates</th><th>Dose</th><th>Done</th></tr></thead><tbody>` +
-      cal.rows.map((r) => `<tr><td>${fmtDate(r.from)}${r.to ? ' – ' + fmtDate(r.to) : ' and after'}</td><td><strong>${r.dose} mg</strong>${cal.f ? ' ' + esc(cal.f) : ''}${note[r.ph] ? ` <span class="muted">(${note[r.ph]})</span>` : ''}${r.ph === 'up' && cal.cond ? `<br><span class="muted">Go up only if ${esc(cal.cond)}</span>` : ''}${r.ph === 'end' || r.ph === 'top' ? `<br><span class="muted">${endTxt}</span>` : ''}</td><td class="box"></td></tr>`).join('') +
+      cal.rows.map((r, i) => `<tr><td>${fmtDate(r.from)}${r.to ? ' – ' + fmtDate(r.to) : ' and after'}</td><td><strong>${r.dose} mg</strong>${cal.f ? ' ' + esc(cal.f) : ''}${note[r.ph] ? ` <span class="muted">(${note[r.ph]})</span>` : ''}${i > 0 && (r.ph === 'up' || (r.ph === 'top' && cal.mode === 'up')) && cal.cond ? `<br><span class="muted">Go up to this dose only if ${esc(cal.cond)}</span>` : ''}${r.ph === 'end' || r.ph === 'top' ? `<br><span class="muted">${endTxt}</span>` : ''}</td><td class="box"></td></tr>`).join('') +
       `</tbody></table></div>` +
       (cal.up && cal.cond ? `<p>Go up to the next step only if <strong>${esc(cal.cond)}</strong>. Once your symptoms are controlled, stay on that dose and message us. ${cal.nw ? 'We will plan the next step at your visit.' : 'We will reset the dates for lowering.'}</p>` : '') +
       (cal.nw ? `<p><strong>Follow-up visit:</strong> in about ${cal.fw === 4 ? '1 month' : cal.fw + ' weeks'} (around <strong>${fmtDate(cal.fu)}</strong>), or sooner once your symptoms are controlled. We will plan how to lower your dose then.</p>` : '') +
@@ -1650,6 +1658,7 @@ window.PLAN_CONFIG = {
       else if (key === 'tt' && id === 'prednisone') { m.t = t.checked ? (m.t?.k === 'p' ? m.t : predDefaults()) : undefined; renderMedCfg(); }
       else if (key === 'tt') { m.t = t.checked ? (m.t || { s: '', st: '', e: 7, mx: '', u: 'mg', f: '', c: 'you are tolerating it', dt: new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10) }) : undefined; renderMedCfg(); }
       else if (key === 't.pl') { const d = LAM[t.value]; Object.assign(m.t, { pl: t.value, g: d.g * (m.t.es && t.value === 'A' ? 2 : 1), st: d.st, sp: d.sp ? 1 : '' }); renderMedCfg(); }
+      else if (key === 't.m') { m.t.m = t.value; if (t.value === 'up' && m.t.cap === '' && m.t.fw == 4) Object.assign(m.t, { cap: 30, fw: 5, c: m.t.c || 'your symptoms are not yet controlled' }); renderMedCfg(); }
       else if (key === 't.nw') { m.t.nw = t.checked ? '' : 1; renderMedCfg(); }
       else if (key === 't.sp') { m.t.sp = t.checked ? 1 : ''; }
       else if (key === 't.es') { m.t.es = t.checked ? 1 : ''; if (m.t.pl === 'A') { const g = num(m.t.g, LAM[m.t.pl].g); m.t.g = t.checked ? g * 2 : Math.max(LAM[m.t.pl].w34, g / 2); } renderMedCfg(); }
@@ -1749,25 +1758,27 @@ window.PLAN_CONFIG = {
       <label class="chip" style="border-radius:8px"><input type="checkbox" id="lt-es-${id}" data-cfg="${id}|t.es" ${t.es ? 'checked' : ''}> On estrogen birth control (same step-up; adds the birth control section${t.pl === 'A' ? '; goal doubled' : ''})</label></div>`;
   }
   function predDefaults() {
-    const t = { k: 'p', s: '', st: 5, e: 7, mx: 60, hw: 1, hu: 'mo', b: PRED_STEPS.map((x) => ({ ...x })), f: 'every morning with food', c: '', dt: new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
-    if (P.c.includes('mg')) Object.assign(t, { s: 10, c: 'your symptoms are not yet controlled', nw: 1, fw: 4 });
+    const t = { k: 'p', m: 'full', s: 10, st: 5, e: 7, cap: '', fw: 4, mx: 60, hw: 1, hu: 'mo', b: PRED_STEPS.map((x) => ({ ...x })), f: 'every morning with food', c: '', dt: new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10) };
+    if (P.c.includes('mg')) Object.assign(t, { m: 'up', cap: 30, fw: 5, c: 'your symptoms are not yet controlled' });
     return t;
   }
   const uOpts = (v) => [['mo', 'month(s)'], ['wk', 'week(s)']].map(([k, l]) => `<option value="${k}"${v === k ? ' selected' : ''}>${l}</option>`).join('');
   function predCfg(id, t) {
     if (!Array.isArray(t.b)) t.b = PRED_STEPS.map((x) => ({ ...x }));
     const f = (k, label, extra = '') => `<label class="field">${label}<input type="number" step="any" min="0" id="pt-${k}-${id}" data-cfg="${id}|t.${k}" value="${esc(t[k])}" ${extra}></label>`;
-    return `<div class="stack" style="gap:.5rem">
-      <div class="grid2">${f('mx', t.nw ? 'Highest dose (mg a day)' : 'Full dose (mg a day)')}${t.nw ? '' : `<div class="field"><span>Stay at full dose for</span><div class="row" style="gap:.4rem;flex-wrap:nowrap">${f('hw', '', 'aria-label="Stay at full dose for" style="flex:1"').replace(/^<label class="field">|<\/label>$/g, '')}<select id="pt-hu-${id}" data-cfg="${id}|t.hu" aria-label="Unit" style="width:auto">${uOpts(t.hu || 'wk')}</select></div></div>`}
-        <label class="field">Start date<input type="date" id="pt-dt-${id}" data-cfg="${id}|t.dt" value="${esc(t.dt)}"></label>
-        <label class="field">When to take it<input type="text" id="pt-f-${id}" data-cfg="${id}|t.f" value="${esc(t.f)}"></label></div>
-      <div class="grp-title">Go up first (optional, e.g. myasthenia)</div>
-      <div class="grid2">${f('s', 'Start dose', 'placeholder="blank = start at full dose"')}${f('st', 'Go up by (mg)')}${f('e', 'Every (days)')}
-        <label class="field">Go up only if…<input type="text" id="pt-c-${id}" data-cfg="${id}|t.c" value="${esc(t.c)}" placeholder="your symptoms are not yet controlled"></label></div>
+    const mode = t.m || (num(t.s, 0) > 0 ? 'up' : 'full');
+    const common = `<label class="field">Start date<input type="date" id="pt-dt-${id}" data-cfg="${id}|t.dt" value="${esc(t.dt)}"></label>
+        <label class="field">When to take it<input type="text" id="pt-f-${id}" data-cfg="${id}|t.f" value="${esc(t.f)}"></label>`;
+    const modeSel = `<label class="field">How to start<select id="pt-m-${id}" data-cfg="${id}|t.m"><option value="full"${mode === 'full' ? ' selected' : ''}>Start at the full dose</option><option value="up"${mode === 'up' ? ' selected' : ''}>Start low and go up until symptoms are controlled</option></select></label>`;
+    const body = mode === 'up' ? `<div class="grid2">${f('s', 'Start dose (mg a day)')}${f('st', 'Go up by (mg)')}${f('e', 'Every (days)')}${f('cap', 'Never above (mg, optional)', 'placeholder="no ceiling"')}${f('fw', 'Follow-up visit in (weeks)')}${common}</div>
+      <label class="field">Go up only if…<input type="text" id="pt-c-${id}" data-cfg="${id}|t.c" value="${esc(t.c)}" placeholder="your symptoms are not yet controlled"></label>
+      <p class="muted">No lowering schedule in this mode. You plan the lowering at the follow-up visit.</p>`
+      : `<div class="grid2">${f('mx', 'Full dose (mg a day)')}${t.nw ? '' : `<div class="field"><span>Stay at full dose for</span><div class="row" style="gap:.4rem;flex-wrap:nowrap">${f('hw', '', 'aria-label="Stay at full dose for" style="flex:1"').replace(/^<label class="field">|<\/label>$/g, '')}<select id="pt-hu-${id}" data-cfg="${id}|t.hu" aria-label="Unit" style="width:auto">${uOpts(t.hu || 'wk')}</select></div></div>`}${common}</div>
       <label class="chip" style="border-radius:8px"><input type="checkbox" id="pt-wean-${id}" data-cfg="${id}|t.nw" ${t.nw ? '' : 'checked'}> Include the lowering schedule</label>
       ${t.nw ? `<div class="grid2">${f('fw', 'Follow-up visit in (weeks)')}</div>` : `<div class="grp-title">Lower (the last row is where lowering stops)</div>
       <div class="tbl" style="overflow-x:auto"><table class="steps-tbl"><thead><tr><th>Until (mg)</th><th>Lower by (mg)</th><th>Every</th><th></th></tr></thead><tbody>${(t.b || []).map((x, i) => `<tr>${['f', 'by', 'w'].map((k) => `<td${k === 'w' ? ' class="every"' : ''}><input type="number" step="any" min="0" aria-label="${{ f: 'Until mg', by: 'Lower by mg', w: 'Every' }[k]}, row ${i + 1}" id="pb-${k}-${i}-${id}" data-cfg="${id}|t.b.${i}.${k}" value="${esc(x[k])}">${k === 'w' ? `<select aria-label="Unit, row ${i + 1}" id="pb-u-${i}-${id}" data-cfg="${id}|t.b.${i}.u">${uOpts(x.u || 'wk')}</select>` : ''}</td>`).join('')}<td><button type="button" class="btn-x" data-band="${id}|rm|${i}" aria-label="Remove row ${i + 1}">✕</button></td></tr>`).join('')}</tbody></table></div>
-      <div class="row" style="gap:.5rem;flex-wrap:wrap"><button type="button" class="btn ghost" data-band="${id}|add">Add a row</button><button type="button" class="btn ghost" data-band="${id}|reset">Reset to usual steps</button></div>`}
+      <div class="row" style="gap:.5rem;flex-wrap:wrap"><button type="button" class="btn ghost" data-band="${id}|add">Add a row</button><button type="button" class="btn ghost" data-band="${id}|reset">Reset to usual steps</button></div>`}`;
+    return `<div class="stack" style="gap:.5rem">${modeSel}${body}
       <p class="muted" id="pt-chk-${id}" aria-live="polite">${taperCheck(taper(t))}</p></div>`;
   }
   function renderMedCfg() {
